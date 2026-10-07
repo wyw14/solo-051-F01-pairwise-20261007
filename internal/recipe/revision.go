@@ -1,7 +1,6 @@
 package recipe
 
 import (
-	"fmt"
 	"github.com/wyw14/cry-161/internal/model"
 	"sort"
 	"sync"
@@ -25,22 +24,34 @@ func NewRevisionStore() *RevisionStore {
 	return &RevisionStore{values: map[model.ID][]Revision{}}
 }
 
+// Freeze compiles a recipe into an immutable revision. Freezing the same
+// recipe revision again is idempotent: the previously stored revision with
+// that number is returned unchanged instead of an error.
 func (s *RevisionStore) Freeze(recipe *model.Recipe) (Revision, error) {
+	s.mu.Lock()
+	for _, value := range s.values[recipe.ID] {
+		if value.Number == recipe.Revision {
+			s.mu.Unlock()
+			return value, nil
+		}
+	}
+	s.mu.Unlock()
+
 	plan, err := Compile(recipe)
 	if err != nil {
 		return Revision{}, err
 	}
 	revision := Revision{ID: model.NewID(), RecipeID: plan.RecipeID, Number: plan.Revision, CreatedAt: time.Now().UTC(), Layers: append([]model.Layer(nil), plan.Layers...)}
 	s.mu.Lock()
-	existing := s.values[recipe.ID]
-	for _, value := range existing {
+	defer s.mu.Unlock()
+	for _, value := range s.values[recipe.ID] {
 		if value.Number == revision.Number {
-			s.mu.Unlock()
-			return Revision{}, fmt.Errorf("revision already frozen")
+			// Lost a concurrent race with another freezer; its revision wins
+			// and this call stays idempotent.
+			return value, nil
 		}
 	}
-	s.values[recipe.ID] = append(existing, revision)
-	s.mu.Unlock()
+	s.values[recipe.ID] = append(s.values[recipe.ID], revision)
 	return revision, nil
 }
 

@@ -32,5 +32,10 @@ func NewRouter(svc *service.Service) http.Handler {
 	r.Get("/api/snapshot", restoreSnapshot(svc, book))
 	r.Get("/api/metrics", metricsStatus(svc, runtime))
 	r.Put("/api/recipes/{recipeID}", recipeEdit(svc))
+	r.Post("/api/recipes/{recipeID}/draft", createDraft(svc))
+	r.Get("/api/recipes/{recipeID}/draft", getDraft(svc))
+	r.Put("/api/recipes/{recipeID}/draft/layers", submitDraftLayer(svc))
+	r.Post("/api/recipes/{recipeID}/draft/review", reviewDraft(svc))
+	r.Post("/api/recipes/{recipeID}/draft/freeze", freezeDraft(svc))
 	return r
 }
