@@ -35,12 +35,23 @@ type Layer struct {
 	RateNanometers   float64 `json:"rate_nm_s"`
 }
 
+type ReviewStatus string
+
+const (
+	ReviewPending  ReviewStatus = "pending"
+	ReviewApproved ReviewStatus = "approved"
+	ReviewRejected ReviewStatus = "rejected"
+)
+
 type Recipe struct {
 	ID        ID            `json:"id"`
 	Name      string        `json:"name"`
 	Revision  int           `json:"revision"`
 	Layers    map[int]Layer `json:"layers"`
 	Published bool          `json:"published"`
+	Operator  string        `json:"operator,omitempty"`
+	Review    ReviewStatus  `json:"review,omitempty"`
+	Frozen    bool          `json:"frozen"`
 }
 
 type ChamberSnapshot struct {

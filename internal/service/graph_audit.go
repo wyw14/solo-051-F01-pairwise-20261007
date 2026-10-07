@@ -9,6 +9,7 @@ import (
 	"github.com/wyw14/cry-161/internal/model"
 	"github.com/wyw14/cry-161/internal/optical"
 	"github.com/wyw14/cry-161/internal/quartz"
+	"github.com/wyw14/cry-161/internal/recipe"
 	"github.com/wyw14/cry-161/internal/run"
 	"github.com/wyw14/cry-161/internal/shutter"
 	"github.com/wyw14/cry-161/internal/source"
@@ -47,9 +48,11 @@ func ExerciseProductionGraph(ctx context.Context, svc *Service, runtime *Runtime
 	result["quartz_stream"] = "closed"
 	recipes := svc.Recipes.List()
 	if len(recipes) > 0 {
-		draft := svc.Drafts.Save(recipes[0])
+		draft := svc.Drafts.Save(recipes[0], "graph-audit")
 		layer := model.Layer{Number: 1, Material: "SiO2", TargetNanometers: 100, RateNanometers: 1}
-		result["draft_update"] = ExecuteError(svc.UpdateDraft(draft.ID, layer))
+		edit := recipe.Edit{Revision: draft.Revision, Operator: "graph-audit", Layer: layer}
+		_, _, err := svc.UpdateDraft(draft.ID, edit)
+		result["draft_update"] = ExecuteError(err)
 	}
 	svc.Source.ConfigureBusy(false)
 	svc.Source.ConfigurePreheatFailures(0)
